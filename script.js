@@ -1,8 +1,8 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Set fixed canvas size based on maze size
-const blockSize = 60; // Adjusted for better visibility
+// Maze settings
+const blockSize = 40;
 const maze = [
   [1, 1, 1, 1, 1, 1, 1, 1],
   [1, 0, 0, 0, 1, 0, 0, 1],
@@ -10,9 +10,11 @@ const maze = [
   [1, 0, 1, 0, 0, 0, 0, 1],
   [1, 1, 1, 1, 1, 1, 1, 1],
 ];
+
 const rows = maze.length;
 const cols = maze[0].length;
 
+// Set canvas size according to maze size
 canvas.width = cols * blockSize;
 canvas.height = rows * blockSize;
 
@@ -21,22 +23,18 @@ let snake = [{x: 1, y: 1}];
 let dx = 0;
 let dy = 0;
 let gameInterval;
-let wallTexture;
 
-// Load wall texture
+// Load wall texture (Optional, if you have wall-texture.png)
 const wallImage = new Image();
 wallImage.src = 'wall-texture.png';
-wallImage.onload = () => {
-  wallTexture = wallImage;
-};
 
 // Draw Maze
 function drawMaze() {
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       if (maze[y][x] === 1) {
-        if (wallTexture) {
-          ctx.drawImage(wallTexture, x * blockSize, y * blockSize, blockSize, blockSize);
+        if (wallImage.complete) {
+          ctx.drawImage(wallImage, x * blockSize, y * blockSize, blockSize, blockSize);
         } else {
           ctx.fillStyle = 'black';
           ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
@@ -83,7 +81,7 @@ document.getElementById('startButton').addEventListener('click', () => {
   dx = 1;
   dy = 0;
   clearInterval(gameInterval);
-  gameInterval = setInterval(gameLoop, 150);
+  gameInterval = setInterval(gameLoop, 200);
 });
 
 // Arrow Controls
@@ -103,4 +101,4 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// No resizing needed anymore (fixed size)
+// No fullscreen resize needed anymore because canvas size matches maze
