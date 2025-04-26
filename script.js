@@ -25,25 +25,13 @@ wallImage.onload = () => {
   wallTexture = wallImage;
 };
 
-// Generate Maze (walls are 1, empty is 0)
-function generateMaze() {
-  maze = [];
-  for (let y = 0; y < rows; y++) {
-    maze[y] = [];
-    for (let x = 0; x < cols; x++) {
-      // Make outer walls
-      if (x === 0 || y === 0 || x === cols-1 || y === rows-1) {
-        maze[y][x] = 1;
-      } else {
-        // Random walls inside (but sparse)
-        maze[y][x] = Math.random() < 0.2 ? 1 : 0;
-      }
-    }
-  }
-
-  // Make sure starting point is empty
-  maze[1][1] = 0;
-}
+const maze = [
+  [1, 1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 1, 0, 0, 1],
+  [1, 0, 1, 0, 1, 0, 1, 1],
+  [1, 0, 1, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1],
+];
 
 // Draw Maze
 function drawMaze() {
