@@ -1,75 +1,82 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const box = 20; // Size of snake parts and walls
-let snake = [{x: 60, y: 60}]; // Start in safe area
-let direction = null;
-let game;
+// Fullscreen Canvas
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-const wallTexture = new Image();
-wallTexture.src = 'wall-texture.png';
+// Maze settings
+const blockSize = 40;
+const rows = Math.floor(canvas.height / blockSize);
+const cols = Math.floor(canvas.width / blockSize);
 
-const maze = [
-  // 1 = wall, 0 = empty space
-  [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
-  [1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-  [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
-  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-];
+// Snake settings
+let snake = [{x: 1, y: 1}];
+let dx = 0;
+let dy = 0;
+let gameInterval;
+let maze = [];
+let wallTexture;
 
+// Load wall texture
+const wallImage = new Image();
+wallImage.src = 'wall-texture.png';
+wallImage.onload = () => {
+  wallTexture = wallImage;
+};
+
+// Generate Maze (walls are 1, empty is 0)
+function generateMaze() {
+  maze = [];
+  for (let y = 0; y < rows; y++) {
+    maze[y] = [];
+    for (let x = 0; x < cols; x++) {
+      // Make outer walls
+      if (x === 0 || y === 0 || x === cols-1 || y === rows-1) {
+        maze[y][x] = 1;
+      } else {
+        // Random walls inside (but sparse)
+        maze[y][x] = Math.random() < 0.2 ? 1 : 0;
+      }
+    }
+  }
+
+  // Make sure starting point is empty
+  maze[1][1] = 0;
+}
+
+// Draw Maze
 function drawMaze() {
-  for (let row = 0; row < maze.length; row++) {
-    for (let col = 0; col < maze[row].length; col++) {
-      if (maze[row][col] === 1) {
-        ctx.drawImage(wallTexture, col * box, row * box, box, box);
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      if (maze[y][x] === 1) {
+        if (wallTexture) {
+          ctx.drawImage(wallTexture, x * blockSize, y * blockSize, blockSize, blockSize);
+        } else {
+          ctx.fillStyle = 'black';
+          ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+        }
       }
     }
   }
 }
 
+// Draw Snake
 function drawSnake() {
-  for (let i = 0; i < snake.length; i++) {
-    ctx.fillStyle = i === 0 ? '#00e676' : '#66bb6a'; // Head: bright green, Body: soft green
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = "#00e676";
-    ctx.fillRect(snake[i].x, snake[i].y, box, box);
-    ctx.shadowBlur = 0; // reset shadow
-  }
+  ctx.fillStyle = 'lightgreen';
+  snake.forEach(segment => {
+    ctx.fillRect(segment.x * blockSize, segment.y * blockSize, blockSize, blockSize);
+  });
 }
 
+// Move Snake
 function moveSnake() {
-  const head = {...snake[0]};
+  const head = {x: snake[0].x + dx, y: snake[0].y + dy};
 
-  if (direction === 'LEFT') head.x -= box;
-  if (direction === 'UP') head.y -= box;
-  if (direction === 'RIGHT') head.x += box;
-  if (direction === 'DOWN') head.y += box;
-
-  // Check wall collision
-  const mazeRow = Math.floor(head.y / box);
-  const mazeCol = Math.floor(head.x / box);
-
-  if (maze[mazeRow] && maze[mazeRow][mazeCol] === 1) {
-    clearInterval(game);
-    setTimeout(() => {
-      alert('💥 Game Over! You hit a wall!');
-    }, 100);
-    return;
-  }
-
-  // Check boundary collision
-  if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-    clearInterval(game);
-    setTimeout(() => {
-      alert('💥 Game Over! You hit the boundary!');
-    }, 100);
+  // Check Wall Collision
+  if (head.x < 0 || head.y < 0 || head.x >= cols || head.y >= rows || maze[head.y][head.x] === 1) {
+    clearInterval(gameInterval);
+    alert('💥 Game Over! You hit a wall!');
     return;
   }
 
@@ -77,21 +84,43 @@ function moveSnake() {
   snake.pop();
 }
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
-  if (e.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
-  if (e.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
-  if (e.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+// Main Game Loop
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawMaze();
+  drawSnake();
+  moveSnake();
+}
+
+// Start Game
+document.getElementById('startButton').addEventListener('click', () => {
+  snake = [{x: 1, y: 1}];
+  dx = 1;
+  dy = 0;
+  generateMaze();
+  clearInterval(gameInterval);
+  gameInterval = setInterval(gameLoop, 150);
 });
 
-document.getElementById('startButton').addEventListener('click', () => {
-  clearInterval(game);
-  snake = [{x: 60, y: 60}]; // Reset snake
-  direction = null;
-  game = setInterval(() => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawMaze();
-    moveSnake();
-    drawSnake();
-  }, 150);
+// Arrow Controls
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp' && dy === 0) {
+    dx = 0;
+    dy = -1;
+  } else if (e.key === 'ArrowDown' && dy === 0) {
+    dx = 0;
+    dy = 1;
+  } else if (e.key === 'ArrowLeft' && dx === 0) {
+    dx = -1;
+    dy = 0;
+  } else if (e.key === 'ArrowRight' && dx === 0) {
+    dx = 1;
+    dy = 0;
+  }
+});
+
+// Resize Canvas when window changes
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 });
