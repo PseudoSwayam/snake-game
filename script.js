@@ -1,21 +1,26 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Fullscreen Canvas
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// Set fixed canvas size based on maze size
+const blockSize = 60; // Adjusted for better visibility
+const maze = [
+  [1, 1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 1, 0, 0, 1],
+  [1, 0, 1, 0, 1, 0, 1, 1],
+  [1, 0, 1, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1],
+];
+const rows = maze.length;
+const cols = maze[0].length;
 
-// Maze settings
-const blockSize = 40;
-const rows = Math.floor(canvas.height / blockSize);
-const cols = Math.floor(canvas.width / blockSize);
+canvas.width = cols * blockSize;
+canvas.height = rows * blockSize;
 
 // Snake settings
 let snake = [{x: 1, y: 1}];
 let dx = 0;
 let dy = 0;
 let gameInterval;
-let maze = [];
 let wallTexture;
 
 // Load wall texture
@@ -24,14 +29,6 @@ wallImage.src = 'wall-texture.png';
 wallImage.onload = () => {
   wallTexture = wallImage;
 };
-
-const maze = [
-  [1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 1, 0, 0, 1],
-  [1, 0, 1, 0, 1, 0, 1, 1],
-  [1, 0, 1, 0, 0, 0, 0, 1],
-  [1, 1, 1, 1, 1, 1, 1, 1],
-];
 
 // Draw Maze
 function drawMaze() {
@@ -85,7 +82,6 @@ document.getElementById('startButton').addEventListener('click', () => {
   snake = [{x: 1, y: 1}];
   dx = 1;
   dy = 0;
-  generateMaze();
   clearInterval(gameInterval);
   gameInterval = setInterval(gameLoop, 150);
 });
@@ -107,8 +103,4 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Resize Canvas when window changes
-window.addEventListener('resize', () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-});
+// No resizing needed anymore (fixed size)
