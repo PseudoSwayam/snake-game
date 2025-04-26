@@ -3,13 +3,13 @@ const ctx = canvas.getContext('2d');
 
 const blockSize = 40;
 
-// Maze definition: 1 = wall, 0 = empty path
-const maze = [
-  [1,1,1,1,1,1,1,1],
-  [1,0,0,0,1,0,0,1],
-  [1,0,1,0,1,0,1,1],
-  [1,0,1,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1]
+// 0 = path, 1 = wall
+const mazeMap = [
+  [1, 1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 1, 0, 0, 1],
+  [1, 0, 1, 0, 1, 0, 1, 1],
+  [1, 0, 1, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
 const rows = maze.length;
