@@ -1,36 +1,31 @@
 body {
-  background: linear-gradient(to bottom, #2e7d32, #1b5e20); /* Gradient green */
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #1a3d1a; /* Dark green background */
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  margin: 0;
-  overflow: hidden;
-}
-
-.game-container {
-  position: relative;
-  text-align: center;
+  flex-direction: column;
 }
 
 #gameCanvas {
-  border: 5px solid #000;
-  background-color: #c8e6c9; /* light green */
-  box-shadow: 0 0 20px #000;
+  border: 5px solid black;
+  background-color: #1a3d1a;
 }
 
 #startButton {
-  margin-top: 10px;
+  margin-top: 20px;
   padding: 10px 20px;
-  font-size: 18px;
-  background-color: #43a047;
+  font-size: 20px;
+  cursor: pointer;
+  background-color: #4CAF50;
   color: white;
   border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color 0.3s;
+  border-radius: 8px;
 }
 
 #startButton:hover {
-  background-color: #388e3c;
+  background-color: #45a049;
 }
