@@ -2,23 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>🐍 Snake Legendary Edition 🐍</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Snake Maze Game</title>
+  <link rel="stylesheet" href="style.css"> <!-- Connect CSS -->
 </head>
 <body>
-  <div class="game-container">
-    <div class="score-board">
-      <span id="score">Score: 0</span>
-      <button id="pauseBtn">⏸️ Pause</button>
-    </div>
-    <canvas id="gameCanvas"></canvas>
-    <div class="mobile-controls">
-      <button id="left">⬅️</button>
-      <button id="up">⬆️</button>
-      <button id="down">⬇️</button>
-      <button id="right">➡️</button>
-    </div>
-  </div>
 
-  <audio id="bgMusic"
+  <canvas id="gameCanvas" width="600" height="400"></canvas> <!-- The game screen -->
+
+  <br>
+  <button onclick="startGame()">Start Game</button> <!-- Start button -->
+
+  <script src="script.js"></script> <!-- Connect JavaScript -->
+
+</body>
+</html>
