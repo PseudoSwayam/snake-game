@@ -19,7 +19,7 @@ canvas.width = cols * blockSize;
 canvas.height = rows * blockSize;
 
 // Snake starting position
-let snake = { x: 1, y: 1 };
+let snake = { x: 3, y: 1 };
 let dx = 0;
 let dy = 0;
 let intervalId = null;
