@@ -1,119 +1,121 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-const scoreEl = document.getElementById("score");
-const pauseBtn = document.getElementById("pauseBtn");
+// Setup canvas
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-const gridSize = 20;
-const tileCount = 25;
-canvas.width = gridSize * tileCount;
-canvas.height = gridSize * tileCount;
-
-let snake = [{ x: 10, y: 10 }];
-let food = randomFood();
-let dx = 1;
+// Snake settings
+const boxSize = 30; // Size of each block
+let snake = [{ x: boxSize * 1, y: boxSize * 1 }]; // Start position
+let dx = boxSize;
 let dy = 0;
-let score = 0;
-let speed = 150;
-let gameInterval;
-let paused = false;
 
-function randomFood() {
-  return {
-    x: Math.floor(Math.random() * tileCount),
-    y: Math.floor(Math.random() * tileCount)
-  };
+// Food settings
+let food = { x: boxSize * 5, y: boxSize * 5 };
+
+// Maze map (1 = Wall, 0 = Path)
+const maze = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1],
+  [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1],
+  [1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1],
+  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1],
+  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1],
+  [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+let gameInterval;
+
+function drawMaze() {
+  for (let row = 0; row < maze.length; row++) {
+    for (let col = 0; col < maze[row].length; col++) {
+      if (maze[row][col] === 1) {
+        ctx.fillStyle = 'limegreen'; // Walls
+      } else {
+        ctx.fillStyle = 'black'; // Paths
+      }
+      ctx.fillRect(col * boxSize, row * boxSize, boxSize, boxSize);
+    }
+  }
 }
 
 function drawSnake() {
-  for (let i = 0; i < snake.length; i++) {
-    const glow = 10 + i * 2;
-    ctx.fillStyle = `hsl(${i * 30}, 100%, 50%)`;
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = glow;
-    ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize, gridSize);
-  }
+  ctx.fillStyle = 'white';
+  snake.forEach(part => {
+    ctx.fillRect(part.x, part.y, boxSize, boxSize);
+  });
 }
 
 function drawFood() {
-  ctx.fillStyle = "red";
-  ctx.shadowColor = "red";
-  ctx.shadowBlur = 20;
-  ctx.beginPath();
-  ctx.arc(food.x * gridSize + gridSize / 2, food.y * gridSize + gridSize / 2, gridSize / 2.5, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillStyle = 'red';
+  ctx.fillRect(food.x, food.y, boxSize, boxSize);
 }
 
 function moveSnake() {
-  const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+  const headX = snake[0].x + dx;
+  const headY = snake[0].y + dy;
 
-  if (
-    head.x < 0 ||
-    head.x >= tileCount ||
-    head.y < 0 ||
-    head.y >= tileCount ||
-    snake.some(segment => segment.x === head.x && segment.y === head.y)
-  ) {
+  // Find which cell snake is moving into
+  const gridX = Math.floor(headX / boxSize);
+  const gridY = Math.floor(headY / boxSize);
+
+  // Hit Wall?
+  if (maze[gridY] && maze[gridY][gridX] === 1) {
+    alert('💥 Game Over! You hit a wall!');
     clearInterval(gameInterval);
-    alert(`Game Over! Your score was ${score}`);
     return;
   }
 
-  snake.unshift(head);
+  // New snake head
+  snake.unshift({ x: headX, y: headY });
 
-  if (head.x === food.x && head.y === food.y) {
-    food = randomFood();
-    score++;
-    scoreEl.innerText = `Score: ${score}`;
-    if (speed > 50) {
-      speed -= 5;
-      clearInterval(gameInterval);
-      gameInterval = setInterval(game, speed);
+  // Eat food?
+  if (headX === food.x && headY === food.y) {
+    generateFood();
+  } else {
+    snake.pop(); // Remove last part
+  }
+}
+
+function generateFood() {
+  let valid = false;
+  while (!valid) {
+    const x = Math.floor(Math.random() * 20) * boxSize;
+    const y = Math.floor(Math.random() * 9) * boxSize;
+    if (maze[Math.floor(y / boxSize)][Math.floor(x / boxSize)] === 0) {
+      food = { x, y };
+      valid = true;
     }
-  } else {
-    snake.pop();
   }
 }
 
-function game() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawSnake();
-  drawFood();
-  moveSnake();
-}
-
-function togglePause() {
-  if (paused) {
-    gameInterval = setInterval(game, speed);
-    pauseBtn.innerText = "⏸️ Pause";
-    paused = false;
-  } else {
-    clearInterval(gameInterval);
-    pauseBtn.innerText = "▶️ Resume";
-    paused = true;
-  }
-}
-
-pauseBtn.addEventListener("click", togglePause);
-
-document.addEventListener("keydown", function (event) {
-  if (event.key === "ArrowUp" && dy === 0) {
-    dx = 0;
-    dy = -1;
-  } else if (event.key === "ArrowDown" && dy === 0) {
-    dx = 0;
-    dy = 1;
-  } else if (event.key === "ArrowLeft" && dx === 0) {
-    dx = -1;
-    dy = 0;
-  } else if (event.key === "ArrowRight" && dx === 0) {
-    dx = 1;
-    dy = 0;
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp' && dy === 0) {
+    dx = 0; dy = -boxSize;
+  } else if (e.key === 'ArrowDown' && dy === 0) {
+    dx = 0; dy = boxSize;
+  } else if (e.key === 'ArrowLeft' && dx === 0) {
+    dx = -boxSize; dy = 0;
+  } else if (e.key === 'ArrowRight' && dx === 0) {
+    dx = boxSize; dy = 0;
   }
 });
 
-document.getElementById("up").onclick = () => { if (dy === 0) { dx = 0; dy = -1; }};
-document.getElementById("down").onclick = () => { if (dy === 0) { dx = 0; dy = 1; }};
-document.getElementById("left").onclick = () => { if (dx === 0) { dx = -1; dy = 0; }};
-document.getElementById("right").onclick = () => { if (dx === 0) { dx = 1; dy = 0; }};
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-gameInterval = setInterval(game, speed);
+  drawMaze();
+  drawSnake();
+  drawFood();
+  
+  moveSnake();
+}
+
+function startGame() {
+  clearInterval(gameInterval);
+  snake = [{ x: boxSize * 1, y: boxSize * 1 }];
+  dx = boxSize;
+  dy = 0;
+  generateFood();
+  gameInterval = setInterval(gameLoop, 200);
+}
