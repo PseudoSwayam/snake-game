@@ -1,288 +1,383 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+// --- Setup ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d'); // Get the 2D drawing context
 
-const tileSize = 20; // smaller tile for a bigger, smoother game
-const tileCols = canvas.width / tileSize;
-const tileRows = canvas.height / tileSize;
+// --- Constants (from Python) ---
+const GRID_SIZE = 20;
+const GRID_WIDTH = 30;
+const GRID_HEIGHT = 20;
 
-let snake = [{ x: 2, y: 2 }];
-let direction = "RIGHT";
-let score = 0;
-let foods = [];
+// Set canvas dimensions based on grid
+canvas.width = GRID_SIZE * GRID_WIDTH;
+canvas.height = GRID_SIZE * GRID_HEIGHT;
 
-const defaultWalls = [
-  // Border walls
-  { x: 0, y: 0, width: 60, height: 1 },    // Top border
-  { x: 0, y: 29, width: 60, height: 1 },   // Bottom border
-  { x: 0, y: 0, width: 1, height: 30 },    // Left border
-  { x: 59, y: 0, width: 1, height: 30 },   // Right border
+// Colors (using CSS color strings)
+const WHITE = 'white';
+const BLACK = 'black';
+const PACMAN_YELLOW = 'yellow'; // Character color
+const SNAKE_COLOR = PACMAN_YELLOW;
+const DARK_SNAKE_COLOR = '#B4B400'; // Darker yellow outline
+const FOOD_COLOR = 'red';
+const DARK_FOOD_COLOR = 'darkred';
+const WALL_COLOR = 'aqua';
+const DARK_WALL_COLOR = '#008B8B'; // Darker aqua/cyan
+const BACKGROUND_COLOR = BLACK;
+const MOUTH_COLOR = BLACK;
+const RED_TEXT = 'red';
+const YELLOW_TEXT = PACMAN_YELLOW;
 
-  // Middle horizontal walls
-  { x: 5, y: 7, width: 50, height: 1 },
-  { x: 5, y: 22, width: 50, height: 1 },
+// Maze Constants
+const PATH = 0;
+const WALL = 1;
 
-  // Middle vertical walls with gaps
-  { x: 5, y: 7, width: 1, height: 5 },    // Left vertical top
-  { x: 5, y: 17, width: 1, height: 5 },   // Left vertical bottom
-  { x: 54, y: 7, width: 1, height: 5 },   // Right vertical top
-  { x: 54, y: 17, width: 1, height: 5 },  // Right vertical bottom
+// Game Settings
+const FPS = 6; // SLOW speed
+const TOTAL_FOOD = 3;
+const EATING_ANIMATION_DURATION = Math.floor(FPS / 2); // Frames mouth stays open
+const CHARACTER_SIZE_FACTOR = 0.85;
+const CHARACTER_BORDER_RADIUS_FACTOR = 0.25; // Relative to GRID_SIZE
 
-  // Inner small blocks
-  { x: 20, y: 10, width: 5, height: 1 },
-  { x: 35, y: 19, width: 5, height: 1 },
+// --- Maze Template (from Python) ---
+const MAZE_TEMPLATE = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,1],
+    [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,1,0,0,0,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,0,0,1,0,0,0,0,1],
+    [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,1,0,0,0,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,0,0,1,0,0,0,0,1],
+    [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
-// Predefined grids (simpler and solvable)
-const grids = [
-  [
-    // Border walls
-    { x: 0, y: 0, width: 60, height: 1 },    // Top border
-    { x: 0, y: 29, width: 60, height: 1 },   // Bottom border
-    { x: 0, y: 0, width: 1, height: 30 },    // Left border
-    { x: 59, y: 0, width: 1, height: 30 },   // Right border
-  
-    // Horizontal walls
-    { x: 10, y: 7, width: 40, height: 1 },   // Top inner wall
-    { x: 10, y: 22, width: 40, height: 1 },  // Bottom inner wall
-  
-    // Vertical walls with gaps
-    { x: 5, y: 5, width: 1, height: 10 },    // Left vertical wall
-    { x: 5, y: 15, width: 1, height: 10 },   // Left vertical bottom
-    { x: 54, y: 5, width: 1, height: 10 },   // Right vertical top
-    { x: 54, y: 15, width: 1, height: 10 },  // Right vertical bottom
-  
-    // Inner small blocks
-    { x: 20, y: 11, width: 5, height: 1 },
-    { x: 35, y: 18, width: 5, height: 1 },
-  ],
-  [
-    // Border walls
-    { x: 0, y: 0, width: 60, height: 1 },    // Top border
-    { x: 0, y: 29, width: 60, height: 1 },   // Bottom border
-    { x: 0, y: 0, width: 1, height: 30 },    // Left border
-    { x: 59, y: 0, width: 1, height: 30 },   // Right border
-  
-    // Horizontal walls
-    { x: 5, y: 7, width: 50, height: 1 },    // Upper inner wall
-    { x: 5, y: 22, width: 50, height: 1 },   // Lower inner wall
-  
-    // Vertical walls (with varying gaps)
-    { x: 10, y: 5, width: 1, height: 10 },   // Left vertical upper
-    { x: 20, y: 15, width: 1, height: 5 },   // Middle vertical block
-    { x: 40, y: 10, width: 1, height: 5 },   // Right vertical top
-    { x: 50, y: 20, width: 1, height: 10 },  // Right vertical bottom
-  
-    // Inner small blocks
-    { x: 25, y: 10, width: 5, height: 1 },
-    { x: 30, y: 18, width: 5, height: 1 },
-  ],
-  [
-    // Border walls
-    { x: 0, y: 0, width: 60, height: 1 },    // Top border
-    { x: 0, y: 29, width: 60, height: 1 },   // Bottom border
-    { x: 0, y: 0, width: 1, height: 30 },    // Left border
-    { x: 59, y: 0, width: 1, height: 30 },   // Right border
-  
-    // Horizontal walls
-    { x: 5, y: 12, width: 50, height: 1 },   // Middle horizontal wall
-  
-    // Vertical walls (random position)
-    { x: 10, y: 5, width: 1, height: 15 },   // Left vertical wall
-    { x: 50, y: 5, width: 1, height: 15 },   // Right vertical wall
-  
-    // Inner small blocks
-    { x: 20, y: 15, width: 5, height: 1 },
-    { x: 35, y: 5, width: 5, height: 1 },
-  ],
-  [
-    // Border walls
-    { x: 0, y: 0, width: 60, height: 1 },    // Top border
-    { x: 0, y: 29, width: 60, height: 1 },   // Bottom border
-    { x: 0, y: 0, width: 1, height: 30 },    // Left border
-    { x: 59, y: 0, width: 1, height: 30 },   // Right border
-  
-    // Horizontal walls with some gaps
-    { x: 5, y: 10, width: 50, height: 1 },   // Horizontal middle wall
-    { x: 5, y: 20, width: 50, height: 1 },   // Horizontal bottom wall
-  
-    // Vertical walls with wider gaps
-    { x: 5, y: 5, width: 1, height: 10 },    // Left vertical wall
-    { x: 5, y: 15, width: 1, height: 5 },    // Left bottom vertical block
-    { x: 54, y: 5, width: 1, height: 10 },   // Right vertical wall
-    { x: 54, y: 15, width: 1, height: 5 },   // Right bottom vertical block
-  
-    // Inner small blocks with larger spacing
-    { x: 25, y: 8, width: 5, height: 1 },
-    { x: 30, y: 18, width: 5, height: 1 },
-  ],
-  [
-    // Border walls
-    { x: 0, y: 0, width: 60, height: 1 },    // Top border
-    { x: 0, y: 29, width: 60, height: 1 },   // Bottom border
-    { x: 0, y: 0, width: 1, height: 30 },    // Left border
-    { x: 59, y: 0, width: 1, height: 30 },   // Right border
-  
-    // Multiple horizontal walls with gaps
-    { x: 5, y: 7, width: 40, height: 1 },    // Upper inner wall
-    { x: 5, y: 14, width: 30, height: 1 },   // Middle inner wall
-    { x: 5, y: 22, width: 50, height: 1 },   // Bottom inner wall
-  
-    // Vertical walls with varying positions
-    { x: 10, y: 5, width: 1, height: 10 },   // Left vertical block
-    { x: 25, y: 15, width: 1, height: 5 },   // Middle vertical block
-    { x: 45, y: 5, width: 1, height: 10 },   // Right vertical block
-  
-    // Inner small blocks
-    { x: 20, y: 10, width: 5, height: 1 },
-    { x: 40, y: 17, width: 5, height: 1 },
-  ],
-];
 
-let walls = [...defaultWalls]; // Default walls for the first game
+// --- Global Game Variables ---
+let snakePositions = []; // Path history [[x, y], [x, y], ...]
+let snakeDirection = { dx: 0, dy: 0 }; // {dx: 1, dy: 0} for right, etc.
+let foodPosition = { x: 0, y: 0 }; // {x: gridX, y: gridY}
+let maze = []; // Will hold a copy of the template
+let foodEatenCount = 0;
+let gameState = "playing"; // playing, game_over, won
+let isEatingAnimating = false;
+let eatingAnimationTimer = 0;
+let gameInterval = null; // To store the interval ID for stopping/starting
 
-document.addEventListener("keydown", changeDirection);
-generateFood(); // generate first foods
-gameLoop();
+// --- Helper Functions ---
 
-function gameLoop() {
-  setTimeout(function () {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawBackground();
-    moveSnake();
-    drawSnake();
-    drawFood();
-    drawWalls();
-    checkGameOver();
-    gameLoop();
-  }, 100);
+// Deep copy function for the maze template
+function deepCopy(arr) {
+    return JSON.parse(JSON.stringify(arr));
 }
 
-function drawBackground() {
-  ctx.fillStyle = "#000"; // Dark blackish base
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+function drawWallBlock(ctx, color, outlineColor, gridX, gridY) {
+    ctx.fillStyle = color;
+    ctx.strokeStyle = outlineColor;
+    ctx.fillRect(gridX * GRID_SIZE, gridY * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+    ctx.strokeRect(gridX * GRID_SIZE, gridY * GRID_SIZE, GRID_SIZE, GRID_SIZE);
 }
 
-function drawWalls() {
-  ctx.fillStyle = "#1E90FF"; // Neon blue walls
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = "#1E90FF";
-  walls.forEach(wall => {
-    ctx.fillRect(
-      wall.x * tileSize,
-      wall.y * tileSize,
-      wall.width * tileSize,
-      wall.height * tileSize
+function drawFoodBlock(ctx, color, outlineColor, gridX, gridY) {
+    ctx.fillStyle = color;
+    ctx.strokeStyle = outlineColor;
+    ctx.fillRect(gridX * GRID_SIZE, gridY * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+    ctx.strokeRect(gridX * GRID_SIZE, gridY * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+}
+
+// Draw the rounded character
+function drawCharacter(ctx, headPos, direction, isAnimating) {
+    const charSize = Math.floor(GRID_SIZE * CHARACTER_SIZE_FACTOR);
+    const offset = Math.floor((GRID_SIZE - charSize) / 2);
+    const px = headPos.x * GRID_SIZE + offset;
+    const py = headPos.y * GRID_SIZE + offset;
+    const borderRadius = Math.floor(GRID_SIZE * CHARACTER_BORDER_RADIUS_FACTOR);
+
+    ctx.fillStyle = SNAKE_COLOR;
+    ctx.strokeStyle = DARK_SNAKE_COLOR;
+    ctx.lineWidth = 1;
+
+    // Use CanvasRenderingContext2D.roundRect if available (modern browsers)
+    // Fallback to simple rect if not
+    if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(px, py, charSize, charSize, borderRadius);
+        ctx.fill();
+        ctx.stroke();
+    } else {
+        // Fallback for older browsers (no rounded corners)
+        ctx.fillRect(px, py, charSize, charSize);
+        ctx.strokeRect(px, py, charSize, charSize);
+    }
+
+
+    // Mouth Animation (similar logic, using polygon)
+    const center_x = px + charSize / 2;
+    const center_y = py + charSize / 2;
+    const effective_radius = charSize / 2 - 1;
+
+    const mouth_angle = Math.PI / 5; // Approx 36 degrees
+    let base_angle = 0;
+
+    if (direction.dx === 1) base_angle = 0;          // Right
+    else if (direction.dx === -1) base_angle = Math.PI; // Left
+    else if (direction.dy === -1) base_angle = Math.PI / 2; // Up
+    else if (direction.dy === 1) base_angle = 3 * Math.PI / 2; // Down
+
+    if (isAnimating) {
+        const p1 = { x: center_x, y: center_y };
+        const p2_x = center_x + effective_radius * Math.cos(base_angle - mouth_angle);
+        const p2_y = center_y - effective_radius * Math.sin(base_angle - mouth_angle); // Use MINUS sin because Y is down in canvas
+        const p3_x = center_x + effective_radius * Math.cos(base_angle + mouth_angle);
+        const p3_y = center_y - effective_radius * Math.sin(base_angle + mouth_angle); // Use MINUS sin
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2_x, p2_y);
+        ctx.lineTo(p3_x, p3_y);
+        ctx.closePath();
+        ctx.fillStyle = MOUTH_COLOR;
+        ctx.fill();
+    }
+}
+
+function generateMaze() {
+    return deepCopy(MAZE_TEMPLATE); // Use deep copy
+}
+
+function placeFood(snakePathHistory, currentMaze) {
+    let possibleLocations = [];
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+        for (let x = 0; x < GRID_WIDTH; x++) {
+            if (currentMaze[y][x] === PATH) {
+                possibleLocations.push({ x: x, y: y });
+            }
+        }
+    }
+
+    // Filter out locations occupied by the snake's path history
+    possibleLocations = possibleLocations.filter(loc =>
+        !snakePathHistory.some(segment => segment.x === loc.x && segment.y === loc.y)
     );
-  });
-  ctx.shadowBlur = 0;
-}
 
-function moveSnake() {
-  let head = { ...snake[0] };
-  if (direction === "RIGHT") head.x += 1;
-  if (direction === "LEFT") head.x -= 1;
-  if (direction === "UP") head.y -= 1;
-  if (direction === "DOWN") head.y += 1;
-
-  snake.unshift(head);
-
-  // Check if snake eats any food
-  let eatenIndex = foods.findIndex(food => food.x === head.x && food.y === head.y);
-  if (eatenIndex !== -1) {
-    score++;
-    foods.splice(eatenIndex, 1);
-    generateFood(); // Add a new food
-    document.querySelector(".score").textContent = `Score: ${score}`;
-  } else {
-    snake.pop(); // If no food eaten, remove tail
-  }
-}
-
-function drawSnake() {
-  ctx.fillStyle = "#39FF14"; // Neon green
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = "#00FF00";
-  snake.forEach(segment => {
-    ctx.fillRect(segment.x * tileSize, segment.y * tileSize, tileSize, tileSize);
-  });
-  ctx.shadowBlur = 0;
-}
-
-function drawFood() {
-  ctx.fillStyle = "#FF007F"; // Neon pink
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = "#FF007F";
-  foods.forEach(food => {
-    ctx.fillRect(food.x * tileSize, food.y * tileSize, tileSize, tileSize);
-  });
-  ctx.shadowBlur = 0;
-}
-
-function generateFood() {
-  while (foods.length < 3) {
-    let newFood = {
-      x: Math.floor(Math.random() * tileCols),
-      y: Math.floor(Math.random() * tileRows)
-    };
-    // Ensure food is not inside walls
-    if (!isWall(newFood) && !isSnake(newFood)) {
-      foods.push(newFood);
+    if (possibleLocations.length === 0) {
+        console.error("No valid location to place food!");
+        return { x: 1, y: 1 }; // Absolute fallback
     }
-  }
-}
 
-function isWall(position) {
-  return walls.some(wall =>
-    position.x >= wall.x &&
-    position.x < wall.x + wall.width &&
-    position.y >= wall.y &&
-    position.y < wall.y + wall.height
-  );
-}
-
-function isSnake(position) {
-  return snake.some(segment => segment.x === position.x && segment.y === position.y);
-}
-
-function changeDirection(event) {
-  if (event.keyCode === 37 && direction !== "RIGHT") {
-    direction = "LEFT";
-  } else if (event.keyCode === 38 && direction !== "DOWN") {
-    direction = "UP";
-  } else if (event.keyCode === 39 && direction !== "LEFT") {
-    direction = "RIGHT";
-  } else if (event.keyCode === 40 && direction !== "UP") {
-    direction = "DOWN";
-  }
-}
-
-function checkGameOver() {
-  let head = snake[0];
-
-  // Check wall collisions
-  if (head.x < 0 || head.x >= tileCols || head.y < 0 || head.y >= tileRows || isWall(head)) {
-    alert("Game Over! Your score: " + score);
-    resetGame();
-  }
-
-  // Check self collision
-  for (let i = 1; i < snake.length; i++) {
-    if (head.x === snake[i].x && head.y === snake[i].y) {
-      alert("Game Over! Your score: " + score);
-      resetGame();
-    }
-  }
+    const randomIndex = Math.floor(Math.random() * possibleLocations.length);
+    return possibleLocations[randomIndex];
 }
 
 function resetGame() {
-  snake = [{ x: 2, y: 2 }];
-  direction = "RIGHT";
-  score = 0;
-  foods = [];
-  generateFood();
-  document.querySelector(".score").textContent = `Score: ${score}`;
+    console.log("Resetting game...");
 
-  // Select a new grid layout after the game over
-  const randomGrid = grids[Math.floor(Math.random() * grids.length)];
-  walls = randomGrid;
+    let startX = Math.floor(GRID_WIDTH / 2);
+    let startY = Math.floor(GRID_HEIGHT / 2); // Start center
+
+    // Ensure start position is valid path
+    while (startY < GRID_HEIGHT -1 && MAZE_TEMPLATE[startY][startX] === WALL) {
+        startY++;
+    }
+     // If still wall, try moving up
+    if (MAZE_TEMPLATE[startY][startX] === WALL) {
+         startY = Math.floor(GRID_HEIGHT / 2); // Reset Y
+         while (startY > 0 && MAZE_TEMPLATE[startY][startX] === WALL) {
+            startY--;
+        }
+    }
+    // Final fallback if center column is wall
+    if (MAZE_TEMPLATE[startY][startX] === WALL) {
+        startX = 1; startY = 1; // Top left corner path
+    }
+
+
+    // Initial path history (head first)
+    snakePositions = [{ x: startX, y: startY }];
+    // Add initial segments if possible (for collision logic)
+    for (let i = 1; i < 3; i++) {
+         const prevX = startX - i;
+         if (prevX >= 0 && MAZE_TEMPLATE[startY][prevX] === PATH) {
+              snakePositions.push({ x: prevX, y: startY });
+         } else {
+             break;
+         }
+    }
+
+
+    snakeDirection = { dx: 1, dy: 0 }; // Start right
+    maze = generateMaze(); // Get a fresh copy of the maze
+    foodPosition = placeFood(snakePositions, maze); // Place initial food
+    foodEatenCount = 0;
+    isEatingAnimating = false;
+    eatingAnimationTimer = 0;
+    gameState = "playing"; // Set state to playing
+
+    // Clear previous interval if exists and start new one
+    if (gameInterval) {
+        clearInterval(gameInterval);
+    }
+    gameInterval = setInterval(gameLoop, 1000 / FPS); // Start game loop
 }
+
+// --- Input Handling ---
+document.addEventListener('keydown', (event) => {
+    // Prevent browser scrolling with arrow keys/space
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
+        event.preventDefault();
+    }
+
+    if (gameState === "game_over" || gameState === "won") {
+        if (event.key === ' ') {
+            resetGame();
+        }
+    } else if (gameState === "playing") {
+        const currentDx = snakeDirection.dx;
+        const currentDy = snakeDirection.dy;
+
+        switch (event.key) {
+            case 'ArrowUp':
+                if (currentDy === 0) snakeDirection = { dx: 0, dy: -1 };
+                break;
+            case 'ArrowDown':
+                if (currentDy === 0) snakeDirection = { dx: 0, dy: 1 };
+                break;
+            case 'ArrowLeft':
+                if (currentDx === 0) snakeDirection = { dx: -1, dy: 0 };
+                break;
+            case 'ArrowRight':
+                if (currentDx === 0) snakeDirection = { dx: 1, dy: 0 };
+                break;
+        }
+    }
+});
+
+// --- Game Loop ---
+function gameLoop() {
+    // --- Update Animation Timer ---
+    if (isEatingAnimating) {
+        eatingAnimationTimer--;
+        if (eatingAnimationTimer <= 0) {
+            isEatingAnimating = false;
+        }
+    }
+
+    // --- Update Game State (Only if playing) ---
+    if (gameState === "playing") {
+        const currentHead = snakePositions[0];
+        const newHead = {
+            x: currentHead.x + snakeDirection.dx,
+            y: currentHead.y + snakeDirection.dy
+        };
+
+        // Collision Checks
+        const hitEdge = newHead.x < 0 || newHead.x >= GRID_WIDTH || newHead.y < 0 || newHead.y >= GRID_HEIGHT;
+        let hitMazeWall = false;
+        if (!hitEdge) {
+            if (maze[newHead.y][newHead.x] === WALL) hitMazeWall = true;
+        } else {
+            hitMazeWall = true;
+        }
+
+        let hitSelf = false;
+        // Check collision against the rest of the path history
+        if (snakePositions.length > 1) {
+             hitSelf = snakePositions.slice(1).some(segment => segment.x === newHead.x && segment.y === newHead.y);
+        }
+
+
+        // --- Set Game Over State ---
+        if (hitMazeWall || hitSelf) {
+            console.log(`Collision! Wall:${hitMazeWall}, Self:${hitSelf}. Setting game_state='game_over'`);
+            gameState = "game_over";
+             // Stop the interval when game is over? Optional, drawing still happens.
+             // clearInterval(gameInterval); // If you stop, SPACE needs to restart it in resetGame
+        } else {
+            // --- No Collision: Update Position & Handle Food ---
+            snakePositions.unshift(newHead); // Add new head
+
+            if (newHead.x === foodPosition.x && newHead.y === foodPosition.y) { // Ate food
+                foodEatenCount++;
+                isEatingAnimating = true;
+                eatingAnimationTimer = EATING_ANIMATION_DURATION;
+                // Don't pop tail (path grows)
+
+                if (foodEatenCount >= TOTAL_FOOD) { // Check win condition
+                    console.log("Win condition met! Setting game_state='won'");
+                    gameState = "won";
+                    foodPosition = null; // No more food
+                     // clearInterval(gameInterval); // Optional stop on win
+                } else {
+                    foodPosition = placeFood(snakePositions, maze); // Place new food
+                }
+            } else { // Didn't eat food
+                snakePositions.pop(); // Pop tail from path history
+            }
+        }
+    } // End of if (gameState === "playing")
+
+    // --- Draw Everything ---
+    // Clear canvas
+    ctx.fillStyle = BACKGROUND_COLOR;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Maze Walls
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+        for (let x = 0; x < GRID_WIDTH; x++) {
+            if (maze[y][x] === WALL) {
+                drawWallBlock(ctx, WALL_COLOR, DARK_WALL_COLOR, x, y);
+            }
+        }
+    }
+
+    // Draw Character Head
+    if (snakePositions.length > 0) {
+        const headPos = snakePositions[0];
+        // Don't animate mouth if game is over/won
+        drawCharacter(ctx, headPos, snakeDirection, isEatingAnimating && gameState === "playing");
+    }
+
+    // Draw Food
+    if (gameState === "playing" && foodPosition) {
+        drawFoodBlock(ctx, FOOD_COLOR, DARK_FOOD_COLOR, foodPosition.x, foodPosition.y);
+    }
+
+    // Draw Score Text
+    ctx.fillStyle = WHITE;
+    ctx.font = '20px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top'; // Align text nicely at top-left
+    ctx.fillText(`Food: ${foodEatenCount} / ${TOTAL_FOOD}`, 10, 10);
+
+    // Draw Game Over / Win Messages
+    if (gameState === "game_over" || gameState === "won") {
+        ctx.fillStyle = (gameState === "game_over") ? RED_TEXT : YELLOW_TEXT;
+        ctx.font = 'bold 40px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle'; // Center text vertically
+
+        const message = (gameState === "game_over") ? "GAME OVER!" : "YOU WIN!";
+        ctx.fillText(message, canvas.width / 2, canvas.height / 2 - 40);
+
+        ctx.fillStyle = WHITE;
+        ctx.font = '24px sans-serif';
+        if (gameState === "game_over") {
+             ctx.fillText(`Food Eaten: ${foodEatenCount}`, canvas.width / 2, canvas.height / 2);
+        }
+
+        ctx.font = '28px sans-serif';
+        ctx.fillText("Press SPACE to Play Again", canvas.width / 2, canvas.height / 2 + 40);
+    }
+}
+
+// --- Initial Game Start ---
+resetGame(); // Call reset once to initialize and start the loop
